@@ -10,15 +10,81 @@ import plotly.express as px
 from streamlit_extras.metric_cards import style_metric_cards
 from kaggle.api.kaggle_api_extended import KaggleApi
 
-headers = {
-    "authorization": st.secrets["auth_token"],
-    "content-type": "application/json"
-}
+import os
+import requests
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+from collections import defaultdict
+import zipfile
+import tarfile
+from pathlib import Path
+import plotly.express as px
+from streamlit_extras.metric_cards import style_metric_cards
+import io
 
 # Constants
 TEMP_FOLDER = 'temp_folder'
 VALID_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
 VALID_ARCHIVE_EXTENSIONS = ('.zip', '.tar.gz', '.tgz')
+KAGGLE_API_URL = "https://www.kaggle.com/api/v1"
+
+# Kaggle API configuration using your secrets
+KAGGLE_CREDS = {
+    "username": st.secrets["kaggle"]["username"],
+    "token": st.secrets["kaggle"]["auth_token"]
+}
+
+headers = {
+    "Authorization": f"Bearer {KAGGLE_CREDS['token']}",
+    "Content-Type": "application/json"
+}
+
+def download_kaggle_dataset(dataset_name):
+    """Download dataset from Kaggle using direct API calls with authentication"""
+    try:
+        create_temp_folder()
+        
+        # 1. First get the dataset metadata to verify access
+        dataset_info_url = f"{KAGGLE_API_URL}/datasets/view/{dataset_name}"
+        info_response = requests.get(dataset_info_url, headers=headers)
+        
+        if info_response.status_code != 200:
+            st.error(f"Failed to access dataset: {info_response.text}")
+            return None
+        
+        # 2. Download the dataset
+        st.info(f"Downloading dataset: {dataset_name}")
+        download_url = f"{KAGGLE_API_URL}/datasets/download/{dataset_name}"
+        
+        with requests.get(download_url, headers=headers, stream=True) as response:
+            response.raise_for_status()
+            
+            # Save the zip file
+            zip_filename = f"{dataset_name.replace('/', '-')}.zip"
+            zip_path = os.path.join(TEMP_FOLDER, zip_filename)
+            
+            with open(zip_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:  # filter out keep-alive chunks
+                        f.write(chunk)
+            
+            # Extract the zip file
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(TEMP_FOLDER)
+            
+            # Remove the zip file
+            os.remove(zip_path)
+            
+            st.success("Dataset downloaded and extracted successfully!")
+            return TEMP_FOLDER
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"API request failed: {str(e)}")
+        return None
+    except Exception as e:
+        st.error(f"Download failed: {str(e)}")
+        return None
 
 # Custom CSS for styling
 st.markdown("""
@@ -510,4 +576,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
