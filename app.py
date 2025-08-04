@@ -9,6 +9,24 @@ import tarfile
 from pathlib import Path
 import plotly.express as px
 from streamlit_extras.metric_cards import style_metric_cards
+import json
+
+# Retrieve the Kaggle credentials from Streamlit secrets
+kaggle_credentials = os.getenv('KAGGLE_JSON')
+
+if kaggle_credentials:
+    # Create the .kaggle directory if it doesn't exist
+    os.makedirs("/root/.kaggle", exist_ok=True)
+    
+    # Save the kaggle.json file to the required location
+    with open("/root/.kaggle/kaggle.json", "w") as f:
+        json.dump(json.loads(kaggle_credentials), f)
+
+    # Now authenticate with Kaggle API
+    import kaggle
+    kaggle.api.authenticate()
+else:
+    raise ValueError("Kaggle credentials are not set in Streamlit Secrets.")
 
 # Constants
 TEMP_FOLDER = 'temp_folder'
@@ -504,4 +522,5 @@ def main():
         cleanup_temp_folder()
 
 if __name__ == '__main__':
+
     main()
