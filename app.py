@@ -1,5 +1,4 @@
 import os
-import kaggle
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,24 +8,41 @@ import tarfile
 from pathlib import Path
 import plotly.express as px
 from streamlit_extras.metric_cards import style_metric_cards
-import json
+from kaggle.api.kaggle_api_extended import KaggleApi
 
-# Retrieve the Kaggle credentials from Streamlit secrets
-kaggle_credentials = os.getenv('KAGGLE_JSON')
+# ==================== SECURE KAGGLE SETUP ====================
+def setup_kaggle():
+    """Secure Kaggle API setup using Streamlit secrets"""
+    try:
+        api = KaggleApi()
+        
+        # Only works on Streamlit Cloud where secrets are injected
+        if all(k in st.secrets for k in ['kaggle_username', 'kaggle_key']):
+            # Create a temporary config directory
+            kaggle_dir = os.path.join(os.getcwd(), '.kaggle')
+            os.makedirs(kaggle_dir, exist_ok=True)
+            
+            # Create the config file in memory (never logged)
+            config = {
+                "username": st.secrets["kaggle"]["username"],
+                "key": st.secrets["kaggle"]["key"]
+            }
+            
+            # Write securely
+            with open(os.path.join(kaggle_dir, 'kaggle.json'), 'w') as f:
+                f.write(str(config).replace("'", '"'))
+            
+            # Set environment variable
+            os.environ['KAGGLE_CONFIG_DIR'] = kaggle_dir
+        
+        api.authenticate()
+        return api
+    except Exception as e:
+        st.error("Kaggle authentication failed - some features disabled")
+        return None
 
-if kaggle_credentials:
-    # Create the .kaggle directory if it doesn't exist
-    os.makedirs("/root/.kaggle", exist_ok=True)
-    
-    # Save the kaggle.json file to the required location
-    with open("/root/.kaggle/kaggle.json", "w") as f:
-        json.dump(json.loads(kaggle_credentials), f)
-
-    # Now authenticate with Kaggle API
-    import kaggle
-    kaggle.api.authenticate()
-else:
-    raise ValueError("Kaggle credentials are not set in Streamlit Secrets.")
+# Initialize Kaggle API at app start
+kaggle_api = setup_kaggle()
 
 # Constants
 TEMP_FOLDER = 'temp_folder'
@@ -522,5 +538,4 @@ def main():
         cleanup_temp_folder()
 
 if __name__ == '__main__':
-
     main()
