@@ -10,39 +10,10 @@ import plotly.express as px
 from streamlit_extras.metric_cards import style_metric_cards
 from kaggle.api.kaggle_api_extended import KaggleApi
 
-# ==================== SECURE KAGGLE SETUP ====================
-def setup_kaggle():
-    """Secure Kaggle API setup using Streamlit secrets"""
-    try:
-        api = KaggleApi()
-        
-        # Only works on Streamlit Cloud where secrets are injected
-        if all(k in st.secrets for k in ['kaggle_username', 'kaggle_key']):
-            # Create a temporary config directory
-            kaggle_dir = os.path.join(os.getcwd(), '.kaggle')
-            os.makedirs(kaggle_dir, exist_ok=True)
-            
-            # Create the config file in memory (never logged)
-            config = {
-                "username": st.secrets["kaggle"]["username"],
-                "key": st.secrets["kaggle"]["key"]
-            }
-            
-            # Write securely
-            with open(os.path.join(kaggle_dir, 'kaggle.json'), 'w') as f:
-                f.write(str(config).replace("'", '"'))
-            
-            # Set environment variable
-            os.environ['KAGGLE_CONFIG_DIR'] = kaggle_dir
-        
-        api.authenticate()
-        return api
-    except Exception as e:
-        st.error("Kaggle authentication failed - some features disabled")
-        return None
-
-# Initialize Kaggle API at app start
-kaggle_api = setup_kaggle()
+headers = {
+    "authorization": st.secrets["auth_token"],
+    "content-type": "application/json"
+}
 
 # Constants
 TEMP_FOLDER = 'temp_folder'
@@ -539,3 +510,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
