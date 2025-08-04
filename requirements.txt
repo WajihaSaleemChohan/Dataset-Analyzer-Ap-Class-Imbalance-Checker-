@@ -1,8 +1,6 @@
-import os
-import kaggle
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import zipfile
-import tarfile
-import plotly.express as px
+streamlit
+kaggle
+pandas
+matplotlib
+plotly
+streamlit-extras
